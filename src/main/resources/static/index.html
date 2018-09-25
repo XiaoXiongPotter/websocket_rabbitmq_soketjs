@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spring Boot Messaging with Web Sockets</title>
+<link rel="stylesheet"
+	href="/webjars/bootstrap/3.3.5/css/bootstrap.min.css">
+<link rel="stylesheet"
+	href="/webjars/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+</head>
+<body>
+index
+	<div class="container theme-showcase" role="main">
+		<div class="jumbotron">
+			<h1>Spring Boot Messaging with Web Sockets</h1>
+			<p>A simple example for using Web Sockets with Spring Boot.</p>
+		</div>
+
+		<div class="page-header">
+			<h1>Chat Room</h1>
+		</div>
+		<div class="row">
+			<div class="col-sm-4">
+				<div class="panel panel-success">
+					<div class="panel-heading">
+						<h3 class="panel-title">Messages:</h3>
+					</div>
+					<div class="panel-body">
+                      
+						<div class="form-group">
+							<label for="user">User</label><br /> <input type="text" id="user"
+								value="anonymous" />
+						</div>
+						<div class="form-group">
+							<label for="message">Message</label><br />
+							<textarea id="message" placeholder="You message here..."></textarea>
+
+						</div>
+						<button id="send">Send</button>
+
+					</div>
+				</div>
+			</div>
+			<div class="col-sm-8">
+				<div class="panel panel-primary">
+					<div class="panel-heading">
+						<h3 class="panel-title">Messages:</h3>
+					</div>
+					<div class="panel-body">
+						<div id="output"></div>
+					</div>
+				</div>
+			</div>
+			<div class="col-sm-8">
+				<div class="panel panel-primary">
+					<div class="panel-heading">
+						<h3 class="panel-title">Indents:</h3>
+					</div>
+					<div class="panel-body">
+						<div id="output2"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+	<script src="/webjars/jquery/3.1.1/jquery.min.js"></script>
+	<script src="/webjars/sockjs-client/1.1.2/sockjs.min.js"></script>
+	<script src="/webjars/stomp-websocket/2.3.3/stomp.min.js"></script>
+
+	<script>
+		function getQueryString(name) {
+			var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+			var r = window.location.search.substr(1).match(reg);
+			if (r != null)
+				return unescape(r[2]);
+			return null;
+		}
+		$(function() {
+			//var room = getQueryString("room");
+			var room = 123;
+			var user = 123;
+			var socket = new SockJS('http://localhost:8088/stomp');
+			var stompClient = Stomp.over(socket);
+
+			stompClient.connect({}, function(frame) {
+				//	console.log('Connected: ' + frame);		
+				//本段落为正常websocket使用
+				/* stompClient.subscribe('/topic/chat/'+room, function(data) {
+					console.log('>>>>> ' + data);
+					var json = JSON.parse(data.body);
+					console.log("==================:"+json.content)
+					$("#output").append(
+							"<span>"+json.username+":"
+									+ json.content + "</em></span><br/>");
+				}); */
+				
+				//本段落为添加代理后使用，此代理为rabbitmq，订阅方式为a、/exchang为固定，/topicExchange为定义的交换机的名称，/closePlace为
+				//定义的队列名称	
+				 stompClient.subscribe('/exchange/topicExchange/closedPlace', function(data) {
+					console.log('>>>>> ' + data);
+					//var json = JSON.parse(data.body);
+					$("#output").append(
+							"<span>"+$("#user").val()+":"
+									+ data.body + "</em></span><br/>");
+				});
+				
+				/* stompClient.subscribe('/exchange/topicExchange/closedPlace', function(respnose){
+					console.log("========================")
+					console.log(respnose.body)
+	                //showResponse(JSON.parse(respnose.body).responseMessage);
+	            }) */
+
+			});
+
+			$("#send").click(
+					function() {
+						var chatMessage = {}
+						chatMessage["username"] = $("#user").val();
+						chatMessage["content"] = $("#message").val();
+						stompClient.send("/dgs/chat/"+room, {}, JSON
+								.stringify(chatMessage));
+					
+					});
+		});
+	</script>
+</body>
+</html>
